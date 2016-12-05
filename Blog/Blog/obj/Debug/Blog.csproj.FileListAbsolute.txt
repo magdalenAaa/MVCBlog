@@ -79,3 +79,4 @@ C:\Users\Magdalena\Desktop\MVCBlog\Blog\Blog\bin\Microsoft.Owin.Security.Twitter
 C:\Users\Magdalena\Desktop\MVCBlog\Blog\Blog\bin\Microsoft.Owin.Security.MicrosoftAccount.xml
 C:\Users\Magdalena\Desktop\MVCBlog\Blog\Blog\obj\Debug\Blog.dll
 C:\Users\Magdalena\Desktop\MVCBlog\Blog\Blog\obj\Debug\Blog.pdb
+C:\Users\Magdalena\Desktop\MVCBlog\Blog\Blog\obj\Debug\Blog.csprojResolveAssemblyReference.cache
