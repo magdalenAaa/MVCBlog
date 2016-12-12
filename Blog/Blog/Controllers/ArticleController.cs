@@ -23,7 +23,7 @@ namespace Blog.Controllers
             using (var database = new BlogDBContext())
             {
                 //Get articles from database
-                var articles = database.Articles.Include(a => a.Author).ToList();
+                var articles = database.Articles.Include(a => a.Author).Include(a => a.Tags).ToList();
 
                 return View(articles);
             }
@@ -41,7 +41,7 @@ namespace Blog.Controllers
             using (var database = new BlogDBContext())
             {
                 //Get the article from database
-                var article = database.Articles.Where(a => a.Id == id).Include(a => a.Author).First();
+                var article = database.Articles.Where(a => a.Id == id).Include(a => a.Author).Include(a => a.Tags).First();
 
                 if (article == null)
                 {
@@ -57,14 +57,21 @@ namespace Blog.Controllers
         [Authorize]
         public ActionResult Create()
         {
-            return View();
+            using (var database = new BlogDBContext())
+            {
+                var model = new ArticleViewModel();
+                model.Categories = database.Categories.OrderBy(c => c.Name).ToList();
+
+                return View(model);
+            }
+
         }
 
         //
         // POST: Article/Create
         [HttpPost]
         [Authorize]
-        public ActionResult Create(Article article)
+        public ActionResult Create(ArticleViewModel model)
         {
             if (ModelState.IsValid)
             {
@@ -74,7 +81,9 @@ namespace Blog.Controllers
                     var authorId = database.Users.Where(u => u.UserName == this.User.Identity.Name).First().Id;
 
                     // Set articles author
-                    article.AuthorId = authorId;
+                    var article = new Article(authorId, model.Title, model.Content, model.CategoryId);
+
+                    this.SetArticleTags(article, model, database);
 
                     // Save article in DB
                     database.Articles.Add(article);
@@ -85,8 +94,9 @@ namespace Blog.Controllers
 
             }
 
-            return View(article);
+            return View(model);
         }
+
 
         //
         // GET: Article/Delete
@@ -99,12 +109,13 @@ namespace Blog.Controllers
             using (var database = new BlogDBContext())
             {
                 //Get article from database
-                var article = database.Articles.Where(a => a.Id == id).Include(a => a.Author).First();
+                var article = database.Articles.Where(a => a.Id == id).Include(a => a.Author).Include(a => a.Category).First();
 
-                if (! IsUserAuthorizedToEdit(article))
+                if (!IsUserAuthorizedToEdit(article))
                 {
                     return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
                 }
+                ViewBag.TagsString = string.Join(", ", article.Tags.Select(t => t.Name));
                 //Check if article exists
                 if (article == null)
                 {
@@ -126,6 +137,7 @@ namespace Blog.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
+
             using (var database = new BlogDBContext())
             {
                 //Get article from database
@@ -139,6 +151,7 @@ namespace Blog.Controllers
 
                 //Delete article from database
                 database.Articles.Remove(article);
+
                 database.SaveChanges();
 
                 //Redirect to index page
@@ -175,6 +188,10 @@ namespace Blog.Controllers
                 model.Id = article.Id;
                 model.Title = article.Title;
                 model.Content = article.Content;
+                model.CategoryId = article.CategoryId;
+                model.Categories = database.Categories.OrderBy(c => c.Name).ToList();
+
+                model.Tags = string.Join(", ", article.Tags.Select(t => t.Name));
 
                 //Pass the view model to view
                 return View(model);
@@ -197,6 +214,7 @@ namespace Blog.Controllers
                     //Set article properties
                     article.Title = model.Title;
                     article.Content = model.Content;
+                    article.CategoryId = model.CategoryId;
 
                     //Save article state in database
                     database.Entry(article).State = EntityState.Modified;
@@ -218,6 +236,33 @@ namespace Blog.Controllers
 
             return isAdmin || isAuthor;
         }
+        private void SetArticleTags(Article article, ArticleViewModel model, BlogDBContext db)
+        {
+            //Split tags 
+            var tagsStrings = model.Tags.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.ToLower()).Distinct();
+
+            //Clear current article tags
+            article.Tags.Clear();
+
+            //Set new article tags
+            foreach (var tagString in tagsStrings)
+            {
+                //Get tag from db by its name
+                Tag tag = db.Tags.FirstOrDefault(t => t.Name.Equals(tagString));
+
+                //If the tag is null, create new tag
+                if (tag == null)
+                {
+                    tag = new Tag() { Name = tagString };
+                    db.Tags.Add(tag);
+                }
+
+                //Add tag to article tags
+                article.Tags.Add(tag);
+            }
+
+        }
+
 
     }
 }

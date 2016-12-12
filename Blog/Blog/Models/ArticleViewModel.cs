@@ -18,6 +18,11 @@ namespace Blog.Models
         public string Content { get; set; }
 
         public string AuthorId { get; set; }
+        
+        public int CategoryId { get; set; }
+        public ICollection<Article> Articles { get; set; }
+        public List<Category> Categories { get; set; }
 
+        public string Tags { get; set; }
     }
 }
